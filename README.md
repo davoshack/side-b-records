@@ -102,3 +102,8 @@ end of a track when it cuts. To add a record, drop MP3s in `records/` and add an
   [Radio Paradise](https://radioparadise.com), [KEXP](https://kexp.org), [NTS](https://nts.live),
   JZR. The streams belong to the stations; this page only tunes to them.
 - Recordings: see the table above.
+
+## License
+
+The code is [MIT](LICENSE). The recordings in `records/` are not covered by it: they keep the
+licences of their sources, listed in [`records/README.md`](records/README.md).

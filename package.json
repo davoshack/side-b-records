@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "description": "A groove-up record player and FM tuner, sitting on the counter of a record store. WebGL2 + Web Audio, no dependencies.",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "dev": "node server.mjs",
