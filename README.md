@@ -35,6 +35,7 @@ noise, cueing, lead-in landings, skips, the locked groove, and CPU cost.
 | Tonearm | Drag it over the record and let go. Dragging it in starts the platter; parking it stops it. |
 | Record | Drag to spin it by hand, either way. |
 | Tuning knob, dial | Drag, scroll, or click the scale. Between stations there is only static. |
+| Stations… (FM) | The dial ships empty. Add a station's stream address and pick its frequency; it is printed on the tuning scale and saved in your browser. |
 | Volume knob | Drag or scroll. |
 | Front buttons | PHONO, FM, 33/45, START·STOP, CUE. The same controls are in the bar at the top of the screen. |
 | Dust cover | Click to close or open. |
@@ -65,8 +66,9 @@ The output is the velocity of the tip relative to the cartridge body, through th
 curve. Tracing distortion, duller treble near the label, wow from the off-centre hole, the arm's
 10 Hz resonance, skips, the run-out groove and scratching by hand all fall out of that.
 
-**Tune.** [`src/audio/radio.js`](src/audio/radio.js) is the tuner. The stations are real internet
-streams placed along an FM dial; signal strength falls off either side of each one into static.
+**Tune.** [`src/audio/radio.js`](src/audio/radio.js) is the tuner. Stations are internet streams
+placed along an FM dial; signal strength falls off either side of each one into static. No stations
+are built in: you add your own (see below).
 
 **Draw.** [`src/gl/`](src/gl) is a small WebGL2 renderer: a shadow map over the counter, HDR with
 MSAA, depth of field for the shop behind, bloom for the tubes and the neon.
@@ -95,12 +97,19 @@ The files were converted to MP3 and are otherwise unchanged; the lathe trims the
 end of a track when it cuts. To add a record, drop MP3s in `records/` and add an entry to
 `records.js`.
 
+## Radio stations
+
+The app ships with an empty dial. In FM mode, **Stations…** lets you add the direct stream address
+(MP3 or AAC over `https`) of a station, give it a name and a frequency between 87.5 and 108 MHz,
+and remove it again. The list lives in your browser's local storage and is never sent anywhere.
+
+A stream belongs to the station that broadcasts it. Add only stations whose terms allow listening
+through a third-party player, or that have given you permission. The page connects your browser
+directly to the address you give it; it does not record, host or relay anything.
+
 ## Credits
 
 - The idea, and the groove-up approach, come from [rauchg/vinyl](https://github.com/rauchg/vinyl) (MIT).
-- Radio: [FIP](https://www.radiofrance.fr/fip) and France Musique (Radio France),
-  [Radio Paradise](https://radioparadise.com), [KEXP](https://kexp.org), [NTS](https://nts.live),
-  JZR. The streams belong to the stations; this page only tunes to them.
 - Recordings: see the table above.
 
 ## License

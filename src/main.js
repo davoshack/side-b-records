@@ -8,7 +8,7 @@ import * as Art from './scene/art.js';
 import { UNIT, SPINDLE, PIVOT, LID, CRATE, STAND, SLEEVE, worldToPlane } from './scene/layout.js';
 import { AudioRig } from './audio/engine.js';
 import { RECORDS, CUSTOM } from './audio/records.js';
-import { STATIONS, BAND } from './audio/radio.js';
+import { BAND, loadStations, saveStations, makeStation } from './audio/radio.js';
 import { ARM_LE, PIVOT_X, PIVOT_Y, ALPHA_REST, ALPHA_MIN, R_DISC, R_LEADIN, R_LOCK, alphaForRadius, radiusForAlpha, grooveRadius } from './audio/geometry.js';
 import { Z_UP } from './audio/engine-core.js';
 import { TAU, clamp } from './audio/dsp.js';
@@ -26,13 +26,14 @@ const S = {
   record: -1, meta: null, loading: null, playing: false, stopping: false, lockSince: 0, track: -1,
   cam: { az: 0.3, el: 0.34, dist: 1.1, taz: 0.3, tel: 0.34, tdist: 1.1 },
   lid: LID.open, lidT: LID.open, hover: null, drag: null, discDrop: 1, lift: SHELF.map(() => 0),
-  custom: null, radioState: 'off', station: null, strength: 0, level: 0,
+  custom: null, radioState: 'off', station: null, strength: 0, level: 0, stations: loadStations(),
 };
 const VIEWS = { counter: [0.3, 0.34, 1.1], deck: [0.02, 1.02, 0.8], shop: [-0.5, 0.15, 2.4] };
 const CAM_PIVOT = [-0.02, 0.15, 0.0];
 
 // ------------------------------------------------------------------ scene
-const atlas = Art.makeAtlas(), heroes = Art.makeHeroAtlas(SHELF), dialArt = Art.makeDial(), lcd = Art.lcdCanvas();
+const atlas = Art.makeAtlas(), heroes = Art.makeHeroAtlas(SHELF), lcd = Art.lcdCanvas();
+let dialArt = Art.makeDial(S.stations);
 const tex = {
   atlas: R.texture(atlas.canvas), hero: R.texture(heroes.canvas), neon: R.texture(Art.makeNeon()),
   fascia: R.texture(Art.makeFascia()), dial: R.texture(dialArt.canvas), lcd: R.texture(lcd),
@@ -86,7 +87,36 @@ function setSource(src) {
 function setSpeed(rpm) { S.rpm = rpm; rig.post({ type: 'speed', rpm }); syncHud(); }
 function setVolume(v) { S.volume = clamp(v, 0, 1); rig.setVolume(S.volume); $('#vol').value = S.volume; }
 function tune(f) { S.freq = clamp(Math.round(f * 20) / 20, BAND[0], BAND[1]); rig.radio?.tune(S.freq); if (S.source !== 'radio') { const n = rig.radio?.nearest(S.freq); S.station = n && n.d < 0.22 ? n.station : null; } }
-function seek(dir) { if (S.source !== 'radio') setSource('radio'); const s = rig.radio.seek(dir); S.freq = s.f; }
+function seek(dir) {
+  if (S.source !== 'radio') setSource('radio');
+  const s = rig.radio?.seek(dir);
+  if (s) S.freq = s.f; else toast('Nothing on the dial yet. Add a station with "Stations…"');
+}
+
+// ---- the listener's own stations ----
+function setStations(list) {
+  S.stations = [...list].sort((a, b) => a.f - b.f);
+  saveStations(S.stations);
+  dialArt = Art.makeDial(S.stations); R.texture(dialArt.canvas, tex.dial);     // reprint the tuning scale
+  rig.radio?.setStations(S.stations);
+  drawStationList(); syncHud();
+}
+function drawStationList() {
+  const ul = $('#station-list'); ul.textContent = '';
+  if (!S.stations.length) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = 'The dial is empty.'; ul.append(li); return; }
+  for (const st of S.stations) {
+    const li = document.createElement('li'), go = document.createElement('button'), del = document.createElement('button');
+    go.type = del.type = 'button'; go.className = 'go'; del.className = 'del';
+    go.textContent = `${st.f.toFixed(1)}  ${st.name}`; go.title = st.url; del.textContent = 'Remove'; del.setAttribute('aria-label', `Remove ${st.name}`);
+    go.onclick = () => { wake(); setSource('radio'); tune(st.f); };
+    del.onclick = () => setStations(S.stations.filter((k) => k !== st));
+    li.append(go, del); ul.append(li);
+  }
+}
+function openStations() {
+  $('#st-freq').value = S.freq.toFixed(1); $('#st-error').textContent = '';
+  drawStationList(); $('#stations').showModal();
+}
 
 function play() {
   if (!S.meta) { toast(S.loading ? 'Still cutting that one…' : 'Pick a record from the crate first'); return; }
@@ -288,6 +318,17 @@ $('#cue').onclick = () => { wake(); toggleCue(); };
 $('#speed').onclick = () => { wake(); setSpeed(S.rpm === 33 ? 45 : 33); };
 $('#seek-down').onclick = () => { wake(); seek(-1); };
 $('#seek-up').onclick = () => { wake(); seek(1); };
+$('#stations-btn').onclick = () => { wake(); openStations(); };
+$('#st-close').onclick = () => $('#stations').close();
+$('#station-form').onsubmit = (e) => {
+  e.preventDefault();
+  try {
+    const st = makeStation(S.stations, { name: $('#st-name').value, url: $('#st-url').value, f: $('#st-freq').value });
+    setStations([...S.stations, st]);
+    $('#st-name').value = ''; $('#st-url').value = ''; $('#st-error').textContent = '';
+    setSource('radio'); tune(st.f);
+  } catch (err) { $('#st-error').textContent = err.message; }
+};
 $('#knock').onclick = () => { wake(); knock(); };
 $('#cut').onclick = () => $('#file').click();
 $('#vol').oninput = (e) => { wake(); setVolume(+e.target.value); };
@@ -300,7 +341,7 @@ for (const b of document.querySelectorAll('.views button')) b.onclick = () => {
 addEventListener('dragover', (e) => e.preventDefault());
 addEventListener('drop', (e) => { e.preventDefault(); const f = [...e.dataTransfer.files].find((k) => k.type.startsWith('audio/') || /\.(mp3|wav|flac|ogg|m4a|aac)$/i.test(k.name)); if (f) cutFile(f); });
 addEventListener('keydown', (e) => {
-  if (e.target.tagName === 'INPUT' || e.metaKey || e.ctrlKey) return;
+  if (e.target.tagName === 'INPUT' || e.metaKey || e.ctrlKey || $('#stations').open) return;
   const k = e.key.toLowerCase(); wake();
   if (k === ' ') { e.preventDefault(); pressButton('play'); }
   else if (k === 'arrowright') (e.shiftKey ? seek(1) : (setSource('radio'), tune(S.freq + 0.1)));
@@ -324,8 +365,9 @@ function syncHud() {
   let kicker, title, sub, tracks = '';
   if (radio) {
     kicker = `FM ${S.freq.toFixed(2)} MHz`;
-    title = S.station ? S.station.name : 'Static';
-    sub = S.station ? `${S.station.tag} · ${S.station.city} · ${{ live: 'on air', buffering: 'tuning in…', tuning: 'tuning in…', error: 'no signal', static: '' }[S.radioState] || ''}` : 'Turn the tuning knob to find a station';
+    title = S.station ? S.station.name : S.stations.length ? 'Static' : 'No stations yet';
+    sub = S.station ? ({ live: 'On air', buffering: 'Tuning in…', tuning: 'Tuning in…', error: 'No signal from that address', static: '' }[S.radioState] || '')
+      : S.stations.length ? 'Turn the tuning knob to find a station' : 'The dial ships empty. Add a stream with "Stations…"';
   } else if (S.loading) {
     kicker = 'In the cutting room'; title = SHELF[S.loading.i].title; sub = `${S.loading.stage}… ${Math.round(S.loading.p * 100)}%`;
   } else if (rec) {
@@ -349,7 +391,7 @@ function drawLcd(tel) {
   const st = { tags: [['PHONO', !radio], ['FM', radio], ['33', S.rpm === 33], ['45', S.rpm === 45], ['STEREO', radio ? S.radioState === 'live' : tel.down]], level };
   if (radio) {
     st.big = S.freq.toFixed(2); st.unit = 'MHz'; st.bars = Math.round(S.strength * 5);
-    st.line = S.station ? `${S.station.name}${S.radioState === 'live' ? '' : S.radioState === 'error' ? '  NO SIGNAL' : '  ...'}` : '- - -';
+    st.line = S.station ? `${S.station.name}${S.radioState === 'live' ? '' : S.radioState === 'error' ? '  NO SIGNAL' : '  ...'}` : S.stations.length ? '- - -' : 'NO STATIONS';
   } else if (S.loading) { st.big = `CUT ${String(Math.round(S.loading.p * 100)).padStart(2, ' ')}%`; st.line = S.loading.stage; }
   else if (!S.meta) { st.big = 'NO DISC'; st.line = 'PICK A RECORD'; }
   else if (tel.down && S.track >= 0) {
@@ -411,7 +453,7 @@ function frame(now) {
 // ------------------------------------------------------------------ go
 rig.init().then(() => {
   rig.setVolume(S.volume); rig.post({ type: 'speed', rpm: S.rpm });
-  rig.radio.onchange = () => {};
+  rig.radio.setStations(S.stations);
   if (rig.running) $('#start').classList.add('gone');
 }).catch((e) => toast(`Audio could not start: ${e.message}`, 8000));
 syncHud();

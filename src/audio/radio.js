@@ -1,25 +1,38 @@
 // FM tuner. The dial is continuous: between stations there is only static, and a station fades up
-// out of it as the needle comes onto its frequency. The stations are real internet streams.
+// out of it as the needle comes onto its frequency.
+//
+// The dial ships empty. A listener adds the stream address of a station they are allowed to play
+// and picks where on the band it sits; the list is kept in their browser and nowhere else.
 export const BAND = [87.5, 108];
-export const STATIONS = [
-  { f: 88.5, name: 'FIP', city: 'Paris', tag: 'Eclectic', url: 'https://icecast.radiofrance.fr/fip-midfi.mp3' },
-  { f: 90.3, name: 'KEXP', city: 'Seattle', tag: 'Indie', url: 'https://kexp-mp3-128.streamguys1.com/kexp128.mp3' },
-  { f: 92.1, name: 'FIP Jazz', city: 'Paris', tag: 'Jazz', url: 'https://icecast.radiofrance.fr/fipjazz-midfi.mp3' },
-  { f: 94.7, name: 'Radio Paradise', city: 'California', tag: 'Free-form', url: 'https://stream.radioparadise.com/mp3-128' },
-  { f: 96.9, name: 'FIP Groove', city: 'Paris', tag: 'Funk & soul', url: 'https://icecast.radiofrance.fr/fipgroove-midfi.mp3' },
-  { f: 98.5, name: 'RP Mellow', city: 'California', tag: 'Mellow', url: 'https://stream.radioparadise.com/mellow-128' },
-  { f: 100.7, name: 'NTS 1', city: 'London', tag: 'Underground', url: 'https://stream-relay-geo.ntslive.net/stream' },
-  { f: 102.3, name: 'France Musique', city: 'Paris', tag: 'Classical', url: 'https://icecast.radiofrance.fr/francemusique-midfi.mp3' },
-  { f: 104.5, name: 'RP Rock', city: 'California', tag: 'Rock', url: 'https://stream.radioparadise.com/rock-128' },
-  { f: 106.1, name: 'FIP World', city: 'Paris', tag: 'World', url: 'https://icecast.radiofrance.fr/fipworld-midfi.mp3' },
-  { f: 107.3, name: 'JZR Swing', city: 'Geneva', tag: 'Electro swing', url: 'https://jazz-wr04.ice.infomaniak.ch/jazz-wr04-128.mp3' },
-];
+const STORE = 'side-b.stations', SPACING = 0.4;      // MHz: closer than this and two stations bleed together
+const round = (f) => Math.round(f * 10) / 10;
+
+export function loadStations() {
+  try {
+    const list = JSON.parse(localStorage.getItem(STORE) || '[]');
+    return Array.isArray(list) ? list.filter((s) => s && typeof s.name === 'string' && /^https?:\/\//.test(s.url) && s.f >= BAND[0] && s.f <= BAND[1]).sort((a, b) => a.f - b.f) : [];
+  } catch { return []; }
+}
+export function saveStations(list) { try { localStorage.setItem(STORE, JSON.stringify(list)); } catch { /* private window: keep it for this visit only */ } }
+
+// Returns the cleaned-up station, or throws an Error whose message can be shown to the listener.
+export function makeStation(list, { name, url, f }) {
+  name = String(name || '').trim().slice(0, 24); url = String(url || '').trim(); f = round(Number(f));
+  if (!name) throw new Error('Give the station a name');
+  let u; try { u = new URL(url); } catch { throw new Error('That is not a web address'); }
+  if (u.protocol !== 'https:' && u.protocol !== 'http:') throw new Error('The address must start with https://');
+  if (!(f >= BAND[0] && f <= BAND[1])) throw new Error(`Pick a frequency between ${BAND[0]} and ${BAND[1]} MHz`);
+  const near = list.find((s) => Math.abs(s.f - f) < SPACING);
+  if (near) throw new Error(`Too close to ${near.name} at ${near.f.toFixed(1)}: leave ${SPACING} MHz between stations`);
+  return { name, url: u.href, f };
+}
+
 const CAPTURE = 0.22;                 // MHz either side of a station where it can be heard at all
 const LOCK = 0.06;                    // ... and where it is clean
 
 export class Radio {
   constructor(ctx, dest) {
-    this.ctx = ctx; this.freq = 94.7; this.on = false; this.state = 'off'; this.station = null; this.strength = 0;
+    this.ctx = ctx; this.stations = []; this.freq = 94.7; this.on = false; this.state = 'off'; this.station = null; this.strength = 0;
     this.onchange = () => {};
     this.out = ctx.createGain(); this.out.gain.value = 0; this.out.connect(dest);
     // station path: a little bandwidth-limited, like a broadcast
@@ -45,7 +58,7 @@ export class Radio {
 
   nearest(f = this.freq) {
     let best = null, d = 1e9;
-    for (const s of STATIONS) { const k = Math.abs(s.f - f); if (k < d) { d = k; best = s; } }
+    for (const s of this.stations) { const k = Math.abs(s.f - f); if (k < d) { d = k; best = s; } }
     return { station: best, d };
   }
 
@@ -105,10 +118,18 @@ export class Radio {
     if (this.on) this.nzGain.gain.setTargetAtTime(0.16, this.ctx.currentTime, 0.05);
   }
 
-  // step to the next station up or down the dial
+  // the listener changed what is on the dial
+  setStations(list) {
+    this.stations = [...list].sort((a, b) => a.f - b.f);
+    if (this.loaded && !this.stations.some((s) => s.url === this.loaded.url && s.f === this.loaded.f)) this.stop();
+    this.tune(this.freq);
+  }
+
+  // step to the next station up or down the dial; null when the dial is empty
   seek(dir) {
-    const list = STATIONS.filter((s) => (dir > 0 ? s.f > this.freq + 0.01 : s.f < this.freq - 0.01));
-    const s = dir > 0 ? list[0] || STATIONS[0] : list[list.length - 1] || STATIONS[STATIONS.length - 1];
+    const all = this.stations; if (!all.length) return null;
+    const list = all.filter((s) => (dir > 0 ? s.f > this.freq + 0.01 : s.f < this.freq - 0.01));
+    const s = dir > 0 ? list[0] || all[0] : list[list.length - 1] || all[all.length - 1];
     this.tune(s.f);
     return s;
   }

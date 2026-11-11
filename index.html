@@ -27,7 +27,7 @@
 <nav class="bar" aria-label="Controls">
   <div class="seg" role="group" aria-label="Source"><button id="src-phono" class="on">Phono</button><button id="src-radio">FM</button></div>
   <div class="grp phono-only"><button id="play">Start</button><button id="cue" title="Lift or lower the needle (C)">Cue</button><button id="speed" title="Speed (S)">33⅓</button><button id="knock" title="Knock the cabinet (K)">Knock</button></div>
-  <div class="grp radio-only"><button id="seek-down" title="Previous station (Shift+←)">◀ Seek</button><button id="seek-up" title="Next station (Shift+→)">Seek ▶</button></div>
+  <div class="grp radio-only"><button id="seek-down" title="Previous station (Shift+←)">◀ Seek</button><button id="seek-up" title="Next station (Shift+→)">Seek ▶</button><button id="stations-btn" title="Add or remove stations on the dial">Stations…</button></div>
   <label class="vol">Vol<input id="vol" type="range" min="0" max="1" step="0.01" value="0.7" aria-label="Volume"></label>
   <button id="cut" title="Cut your own record from an audio file">Cut a file…</button>
 </nav>
@@ -37,6 +37,21 @@
 <div id="tip" class="tip"></div>
 <div id="fatal" class="fatal" hidden></div>
 <input id="file" type="file" accept="audio/*" hidden>
+
+<dialog id="stations" class="sheet" aria-labelledby="stations-title">
+  <form id="station-form" novalidate>
+    <h2 id="stations-title">Stations</h2>
+    <p class="note">The dial ships empty. Add the stream address of a station you are allowed to play, and choose where on the band it sits. Your list is saved in this browser only.</p>
+    <ul id="station-list"></ul>
+    <div class="row">
+      <label>Name<input id="st-name" maxlength="24" autocomplete="off"></label>
+      <label class="narrow">MHz<input id="st-freq" type="number" min="87.5" max="108" step="0.1" inputmode="decimal"></label>
+    </div>
+    <label>Stream address<input id="st-url" type="url" placeholder="https://…/stream.mp3" autocomplete="off" spellcheck="false"></label>
+    <p id="st-error" class="error" role="alert"></p>
+    <div class="actions"><button type="button" id="st-close">Done</button><button type="submit" class="primary">Add to dial</button></div>
+  </form>
+</dialog>
 
 <script type="module" src="src/main.js"></script>
 </body>

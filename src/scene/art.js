@@ -1,7 +1,7 @@
 // Everything printed: sleeves, labels, shop signs, the neon, the fascia, the LCD. All drawn with
 // canvas 2D at load time; there are no image files.
 import { rng } from '../audio/dsp.js';
-import { STATIONS, BAND } from '../audio/radio.js';
+import { BAND } from '../audio/radio.js';
 
 const SANS = '"Helvetica Neue", Helvetica, Arial, sans-serif';
 const SERIF = 'Georgia, "Times New Roman", serif';
@@ -304,7 +304,7 @@ export function makeFascia() {
 }
 
 // The tuning scale behind the red needle: backlit, so the shader treats it as emitted light.
-export function makeDial() {
+export function makeDial(stations = []) {
   const W = 1024, H = 214, c = canvas(W, H), ctx = c.getContext('2d');
   const g = ctx.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#f3d892'); g.addColorStop(0.5, '#ffe9b0'); g.addColorStop(1, '#e2bd6a');
   ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
@@ -315,7 +315,7 @@ export function makeDial() {
     if (major) { ctx.font = `700 30px ${SANS}`; ctx.fillText(String(f), X(f), 48); }
   }
   ctx.font = `700 15px ${SANS}`; ctx.fillStyle = '#8a2a12';
-  STATIONS.forEach((s, i) => { ctx.beginPath(); ctx.arc(X(s.f), 128, 5, 0, 7); ctx.fill(); ctx.fillText(s.name.toUpperCase().slice(0, 9), X(s.f), i % 2 ? 176 : 152); });
+  stations.forEach((s, i) => { ctx.beginPath(); ctx.arc(X(s.f), 128, 5, 0, 7); ctx.fill(); ctx.fillText(s.name.toUpperCase().slice(0, 9), X(s.f), i % 2 ? 176 : 152); });
   ctx.fillStyle = '#2a1d0a'; ctx.font = `700 16px ${SANS}`; ctx.textAlign = 'left'; ctx.fillText('FM', 8, 18); ctx.textAlign = 'right'; ctx.fillText('MHz', W - 8, 18);
   return { canvas: c, x: (f) => X(f) / W };
 }
