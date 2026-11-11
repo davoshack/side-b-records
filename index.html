@@ -41,7 +41,7 @@
 <dialog id="stations" class="sheet" aria-labelledby="stations-title">
   <form id="station-form" novalidate>
     <h2 id="stations-title">Stations</h2>
-    <p class="note">The dial ships empty. Add the stream address of a station you are allowed to play, and choose where on the band it sits. Your list is saved in this browser only.</p>
+    <p class="note">The dial comes with a few stations on it. Remove any you like, or add the stream address of another and choose where on the band it sits. Your dial is saved in this browser only.</p>
     <ul id="station-list"></ul>
     <div class="row">
       <label>Name<input id="st-name" maxlength="24" autocomplete="off"></label>
@@ -49,7 +49,7 @@
     </div>
     <label>Stream address<input id="st-url" type="url" placeholder="https://…/stream.mp3" autocomplete="off" spellcheck="false"></label>
     <p id="st-error" class="error" role="alert"></p>
-    <div class="actions"><button type="button" id="st-close">Done</button><button type="submit" class="primary">Add to dial</button></div>
+    <div class="actions"><button type="button" id="st-restore" class="quiet" title="Put back any of the original stations you removed">Restore presets</button><button type="button" id="st-close">Done</button><button type="submit" class="primary">Add to dial</button></div>
   </form>
 </dialog>
 

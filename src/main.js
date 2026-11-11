@@ -8,7 +8,7 @@ import * as Art from './scene/art.js';
 import { UNIT, SPINDLE, PIVOT, LID, CRATE, STAND, SLEEVE, worldToPlane } from './scene/layout.js';
 import { AudioRig } from './audio/engine.js';
 import { RECORDS, CUSTOM } from './audio/records.js';
-import { BAND, loadStations, saveStations, makeStation } from './audio/radio.js';
+import { BAND, loadStations, saveStations, makeStation, withPresets } from './audio/radio.js';
 import { ARM_LE, PIVOT_X, PIVOT_Y, ALPHA_REST, ALPHA_MIN, R_DISC, R_LEADIN, R_LOCK, alphaForRadius, radiusForAlpha, grooveRadius } from './audio/geometry.js';
 import { Z_UP } from './audio/engine-core.js';
 import { TAU, clamp } from './audio/dsp.js';
@@ -107,7 +107,7 @@ function drawStationList() {
   for (const st of S.stations) {
     const li = document.createElement('li'), go = document.createElement('button'), del = document.createElement('button');
     go.type = del.type = 'button'; go.className = 'go'; del.className = 'del';
-    go.textContent = `${st.f.toFixed(1)}  ${st.name}`; go.title = st.url; del.textContent = 'Remove'; del.setAttribute('aria-label', `Remove ${st.name}`);
+    go.textContent = `${st.f.toFixed(1)}  ${st.name}${st.tag ? `  ·  ${st.tag}` : ''}`; go.title = st.url; del.textContent = 'Remove'; del.setAttribute('aria-label', `Remove ${st.name}`);
     go.onclick = () => { wake(); setSource('radio'); tune(st.f); };
     del.onclick = () => setStations(S.stations.filter((k) => k !== st));
     li.append(go, del); ul.append(li);
@@ -320,6 +320,7 @@ $('#seek-down').onclick = () => { wake(); seek(-1); };
 $('#seek-up').onclick = () => { wake(); seek(1); };
 $('#stations-btn').onclick = () => { wake(); openStations(); };
 $('#st-close').onclick = () => $('#stations').close();
+$('#st-restore').onclick = () => setStations(withPresets(S.stations));
 $('#station-form').onsubmit = (e) => {
   e.preventDefault();
   try {
@@ -366,8 +367,8 @@ function syncHud() {
   if (radio) {
     kicker = `FM ${S.freq.toFixed(2)} MHz`;
     title = S.station ? S.station.name : S.stations.length ? 'Static' : 'No stations yet';
-    sub = S.station ? ({ live: 'On air', buffering: 'Tuning in…', tuning: 'Tuning in…', error: 'No signal from that address', static: '' }[S.radioState] || '')
-      : S.stations.length ? 'Turn the tuning knob to find a station' : 'The dial ships empty. Add a stream with "Stations…"';
+    sub = S.station ? [S.station.tag, S.station.city, { live: 'on air', buffering: 'tuning in…', tuning: 'tuning in…', error: 'no signal', static: '' }[S.radioState]].filter(Boolean).join(' · ')
+      : S.stations.length ? 'Turn the tuning knob to find a station' : 'The dial is empty. Add a stream with "Stations…"';
   } else if (S.loading) {
     kicker = 'In the cutting room'; title = SHELF[S.loading.i].title; sub = `${S.loading.stage}… ${Math.round(S.loading.p * 100)}%`;
   } else if (rec) {

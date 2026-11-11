@@ -1,17 +1,42 @@
 // FM tuner. The dial is continuous: between stations there is only static, and a station fades up
 // out of it as the needle comes onto its frequency.
 //
-// The dial ships empty. A listener adds the stream address of a station they are allowed to play
-// and picks where on the band it sits; the list is kept in their browser and nowhere else.
+// The dial comes with a handful of stations already on it. A listener can take any of them off and
+// add their own: a stream address and a place on the band. Their dial is kept in their browser.
 export const BAND = [87.5, 108];
-const STORE = 'side-b.stations', SPACING = 0.4;      // MHz: closer than this and two stations bleed together
+const STORE = 'side-b.dial', SPACING = 0.4;          // MHz: closer than this and two stations bleed together
 const round = (f) => Math.round(f * 10) / 10;
 
+// The streams belong to the stations. The listener's browser connects to them directly.
+export const PRESETS = [
+  { f: 88.5, name: 'FIP', city: 'Paris', tag: 'Eclectic', url: 'https://icecast.radiofrance.fr/fip-midfi.mp3' },
+  { f: 90.3, name: 'KEXP', city: 'Seattle', tag: 'Indie', url: 'https://kexp-mp3-128.streamguys1.com/kexp128.mp3' },
+  { f: 92.1, name: 'FIP Jazz', city: 'Paris', tag: 'Jazz', url: 'https://icecast.radiofrance.fr/fipjazz-midfi.mp3' },
+  { f: 94.7, name: 'Radio Paradise', city: 'California', tag: 'Free-form', url: 'https://stream.radioparadise.com/mp3-128' },
+  { f: 96.9, name: 'FIP Groove', city: 'Paris', tag: 'Funk & soul', url: 'https://icecast.radiofrance.fr/fipgroove-midfi.mp3' },
+  { f: 98.5, name: 'RP Mellow', city: 'California', tag: 'Mellow', url: 'https://stream.radioparadise.com/mellow-128' },
+  { f: 100.7, name: 'NTS 1', city: 'London', tag: 'Underground', url: 'https://stream-relay-geo.ntslive.net/stream' },
+  { f: 102.3, name: 'France Musique', city: 'Paris', tag: 'Classical', url: 'https://icecast.radiofrance.fr/francemusique-midfi.mp3' },
+  { f: 104.5, name: 'RP Rock', city: 'California', tag: 'Rock', url: 'https://stream.radioparadise.com/rock-128' },
+  { f: 106.1, name: 'FIP World', city: 'Paris', tag: 'World', url: 'https://icecast.radiofrance.fr/fipworld-midfi.mp3' },
+  { f: 107.3, name: 'JZR Swing', city: 'Geneva', tag: 'Electro swing', url: 'https://jazz-wr04.ice.infomaniak.ch/jazz-wr04-128.mp3' },
+];
+const presets = () => PRESETS.map((s) => ({ ...s }));
+
+// The listener's dial, or the presets if they have never changed it.
 export function loadStations() {
   try {
-    const list = JSON.parse(localStorage.getItem(STORE) || '[]');
-    return Array.isArray(list) ? list.filter((s) => s && typeof s.name === 'string' && /^https?:\/\//.test(s.url) && s.f >= BAND[0] && s.f <= BAND[1]).sort((a, b) => a.f - b.f) : [];
-  } catch { return []; }
+    const raw = localStorage.getItem(STORE);
+    if (raw === null) return presets();
+    const list = JSON.parse(raw);
+    return Array.isArray(list) ? list.filter((s) => s && typeof s.name === 'string' && /^https?:\/\//.test(s.url) && s.f >= BAND[0] && s.f <= BAND[1]).sort((a, b) => a.f - b.f) : presets();
+  } catch { return presets(); }
+}
+// Put back every preset that is missing and still has room on the band.
+export function withPresets(list) {
+  const out = [...list];
+  for (const p of PRESETS) if (!out.some((s) => s.url === p.url || Math.abs(s.f - p.f) < SPACING)) out.push({ ...p });
+  return out.sort((a, b) => a.f - b.f);
 }
 export function saveStations(list) { try { localStorage.setItem(STORE, JSON.stringify(list)); } catch { /* private window: keep it for this visit only */ } }
 
