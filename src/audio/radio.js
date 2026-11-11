@@ -8,18 +8,27 @@ const STORE = 'side-b.dial', SPACING = 0.4;          // MHz: closer than this an
 const round = (f) => Math.round(f * 10) / 10;
 
 // The streams belong to the stations. The listener's browser connects to them directly.
+// `dial` is the short name printed on the tuning scale, when the full one is too long for it.
 export const PRESETS = [
   { f: 88.5, name: 'FIP', city: 'Paris', tag: 'Eclectic', url: 'https://icecast.radiofrance.fr/fip-midfi.mp3' },
   { f: 90.3, name: 'KEXP', city: 'Seattle', tag: 'Indie', url: 'https://kexp-mp3-128.streamguys1.com/kexp128.mp3' },
   { f: 92.1, name: 'FIP Jazz', city: 'Paris', tag: 'Jazz', url: 'https://icecast.radiofrance.fr/fipjazz-midfi.mp3' },
-  { f: 94.7, name: 'Radio Paradise', city: 'California', tag: 'Free-form', url: 'https://stream.radioparadise.com/mp3-128' },
+  { f: 94.7, name: 'Radio Paradise', dial: 'R. PARADISE', city: 'California', tag: 'Free-form', url: 'https://stream.radioparadise.com/mp3-128' },
   { f: 96.9, name: 'FIP Groove', city: 'Paris', tag: 'Funk & soul', url: 'https://icecast.radiofrance.fr/fipgroove-midfi.mp3' },
-  { f: 98.5, name: 'RP Mellow', city: 'California', tag: 'Mellow', url: 'https://stream.radioparadise.com/mellow-128' },
+  { f: 98.5, name: 'RP Mellow', dial: 'RP MELLOW', city: 'California', tag: 'Mellow', url: 'https://stream.radioparadise.com/mellow-128' },
   { f: 100.7, name: 'NTS 1', city: 'London', tag: 'Underground', url: 'https://stream-relay-geo.ntslive.net/stream' },
-  { f: 102.3, name: 'France Musique', city: 'Paris', tag: 'Classical', url: 'https://icecast.radiofrance.fr/francemusique-midfi.mp3' },
+  { f: 102.3, name: 'France Musique', dial: 'F. MUSIQUE', city: 'Paris', tag: 'Classical', url: 'https://icecast.radiofrance.fr/francemusique-midfi.mp3' },
   { f: 104.5, name: 'RP Rock', city: 'California', tag: 'Rock', url: 'https://stream.radioparadise.com/rock-128' },
   { f: 106.1, name: 'FIP World', city: 'Paris', tag: 'World', url: 'https://icecast.radiofrance.fr/fipworld-midfi.mp3' },
-  { f: 107.3, name: 'JZR Swing', city: 'Geneva', tag: 'Electro swing', url: 'https://jazz-wr04.ice.infomaniak.ch/jazz-wr04-128.mp3' },
+  { f: 107.3, name: 'JZR Swing', dial: 'JZR SWING', city: 'Geneva', tag: 'Electro swing', url: 'https://jazz-wr04.ice.infomaniak.ch/jazz-wr04-128.mp3' },
+  // Colombia. Where the band has room, a station sits on its real Bogotá (or Cali) frequency.
+  { f: 91.3, name: 'Javeriana Estéreo', dial: 'JAVERIANA', city: 'Bogotá', tag: 'Culture & classical', url: 'https://radio06.cehis.net/proxy/javerian?mp=%2Fstream' },
+  { f: 93.5, name: 'La Kalle', city: 'Bogotá', tag: 'Vallenato & popular', url: 'https://playerservices.streamtheworld.com/api/livestream-redirect/LA_KALLE.mp3' },
+  { f: 95.9, name: 'Radio Nacional', dial: 'R. NACIONAL', city: 'Bogotá', tag: 'Public radio (RTVC)', url: 'http://shoutcast.rtvc.gov.co:8000/;' },
+  { f: 97.7, name: 'Caracol Radio', dial: 'CARACOL', city: 'Bogotá', tag: 'News & talk', url: 'https://playerservices.streamtheworld.com/api/livestream-redirect/CARACOL_RADIO.mp3' },
+  { f: 99.1, name: 'Radiónica', city: 'Bogotá', tag: 'Alternative (RTVC)', url: 'http://shoutcast.rtvc.gov.co:8010/;' },
+  { f: 102.9, name: 'Tropicana', city: 'Bogotá', tag: 'Tropical & salsa', url: 'https://playerservices.streamtheworld.com/api/livestream-redirect/TROPICANA.mp3' },
+  { f: 105.3, name: 'Univalle Estéreo', dial: 'UNIVALLE', city: 'Cali', tag: 'University & culture', url: 'https://uv-stereo.univalle.edu.co:8000/envivo.mp3' },
 ];
 const presets = () => PRESETS.map((s) => ({ ...s }));
 
@@ -117,6 +126,7 @@ export class Radio {
   load(station) {
     this.stop();
     this.loaded = station; this.state = 'buffering'; this.onchange();
+    if (location.protocol === 'https:' && station.url.startsWith('http:')) { this.state = 'error'; this.apply(); this.onchange(); return; }   // blocked as mixed content
     const viaGraph = !this.failed.has(station.url);
     const el = new Audio();
     el.preload = 'none';

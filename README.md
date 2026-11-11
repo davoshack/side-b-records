@@ -35,7 +35,7 @@ noise, cueing, lead-in landings, skips, the locked groove, and CPU cost.
 | Tonearm | Drag it over the record and let go. Dragging it in starts the platter; parking it stops it. |
 | Record | Drag to spin it by hand, either way. |
 | Tuning knob, dial | Drag, scroll, or click the scale. Between stations there is only static. |
-| Stations… (FM) | The dial comes with eleven stations. Remove any, or add another by its stream address and frequency; your dial is printed on the tuning scale and saved in your browser. |
+| Stations… (FM) | The dial comes with eighteen stations. Remove any, or add another by its stream address and frequency; your dial is printed on the tuning scale and saved in your browser. |
 | Volume knob | Drag or scroll. |
 | Front buttons | PHONO, FM, 33/45, START·STOP, CUE. The same controls are in the bar at the top of the screen. |
 | Dust cover | Click to close or open. |
@@ -67,7 +67,7 @@ curve. Tracing distortion, duller treble near the label, wow from the off-centre
 10 Hz resonance, skips, the run-out groove and scratching by hand all fall out of that.
 
 **Tune.** [`src/audio/radio.js`](src/audio/radio.js) is the tuner. Stations are internet streams
-placed along an FM dial; signal strength falls off either side of each one into static. Eleven
+placed along an FM dial; signal strength falls off either side of each one into static. Eighteen
 are on the dial to begin with, and you can change them (see below).
 
 **Draw.** [`src/gl/`](src/gl) is a small WebGL2 renderer: a shadow map over the counter, HDR with
@@ -99,9 +99,35 @@ end of a track when it cuts. To add a record, drop MP3s in `records/` and add an
 
 ## Radio stations
 
-The dial starts with eleven stations: [FIP](https://www.radiofrance.fr/fip) and its Jazz, Groove
-and World channels and France Musique (Radio France), [Radio Paradise](https://radioparadise.com)
-and its Mellow and Rock mixes, [KEXP](https://kexp.org), [NTS](https://nts.live) and JZR.
+The dial starts with eighteen stations.
+
+| MHz | Station | From | What |
+|---|---|---|---|
+| 88.5 | [FIP](https://www.radiofrance.fr/fip) | Paris | Eclectic |
+| 90.3 | [KEXP](https://kexp.org) | Seattle | Indie |
+| 91.3 | [Javeriana Estéreo](https://www.javerianaestereo.com) | Bogotá | Culture & classical |
+| 92.1 | FIP Jazz | Paris | Jazz |
+| 93.5 | [La Kalle](https://lakalle.bluradio.com) | Bogotá | Vallenato & popular |
+| 94.7 | [Radio Paradise](https://radioparadise.com) | California | Free-form |
+| 95.9 | [Radio Nacional de Colombia](https://www.radionacional.co) (RTVC) | Bogotá | Public radio |
+| 96.9 | FIP Groove | Paris | Funk & soul |
+| 97.7 | [Caracol Radio](https://caracol.com.co) | Bogotá | News & talk |
+| 98.5 | RP Mellow | California | Mellow |
+| 99.1 | [Radiónica](https://www.radionica.rocks) (RTVC) | Bogotá | Alternative |
+| 100.7 | [NTS](https://nts.live) 1 | London | Underground |
+| 102.3 | France Musique | Paris | Classical |
+| 102.9 | [Tropicana](https://www.tropicanafm.com) | Bogotá | Tropical & salsa |
+| 104.5 | RP Rock | California | Rock |
+| 105.3 | [Univalle Estéreo](https://www.univalle.edu.co) | Cali | University & culture |
+| 106.1 | FIP World | Paris | World |
+| 107.3 | JZR Swing | Geneva | Electro swing |
+
+The Colombian stations sit on their real Bogotá or Cali frequency where the dial has room
+(Radio Nacional, Radiónica, Tropicana, Univalle Estéreo) and nearby where it does not.
+Radio Nacional and Radiónica only stream over plain `http`, so they play when you run the page
+locally (`npm run dev`) but a browser blocks them on a page served over `https`.
+
+If you changed your dial before these were added, **Restore presets** puts the new ones on it.
 
 In FM mode, **Stations…** lets you remove any of them, add the direct stream address (MP3 or AAC
 over `https`) of another with a name and a frequency between 87.5 and 108 MHz, and put the

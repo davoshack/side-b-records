@@ -314,8 +314,17 @@ export function makeDial(stations = []) {
     const major = f % 2 === 0; ctx.fillRect(X(f) - (major ? 1.5 : 1), 78, major ? 3 : 2, major ? 34 : f % 1 === 0 ? 24 : 14);
     if (major) { ctx.font = `700 30px ${SANS}`; ctx.fillText(String(f), X(f), 48); }
   }
-  ctx.font = `700 15px ${SANS}`; ctx.fillStyle = '#8a2a12';
-  stations.forEach((s, i) => { ctx.beginPath(); ctx.arc(X(s.f), 128, 5, 0, 7); ctx.fill(); ctx.fillText(s.name.toUpperCase().slice(0, 9), X(s.f), i % 2 ? 176 : 152); });
+  ctx.font = `700 13px ${SANS}`; ctx.fillStyle = '#8a2a12';
+  const rows = [146, 166, 186], end = rows.map(() => -1e9);
+  [...stations].sort((a, b) => a.f - b.f).forEach((s) => {
+    const x = X(s.f), label = (s.dial || s.name).toUpperCase().slice(0, 11), half = ctx.measureText(label).width / 2 + 4;
+    let r = rows.findIndex((_, k) => x - half >= end[k]);
+    if (r < 0) r = end.indexOf(Math.min(...end));                          // no clear row: use the one that frees up first
+    end[r] = x + half;
+    ctx.beginPath(); ctx.arc(x, 126, 4.5, 0, 7); ctx.fill();
+    ctx.fillRect(x - 0.5, 131, 1, rows[r] - 138);                           // a thin lead from the dot down to its name
+    ctx.fillText(label, x, rows[r]);
+  });
   ctx.fillStyle = '#2a1d0a'; ctx.font = `700 16px ${SANS}`; ctx.textAlign = 'left'; ctx.fillText('FM', 8, 18); ctx.textAlign = 'right'; ctx.fillText('MHz', W - 8, 18);
   return { canvas: c, x: (f) => X(f) / W };
 }
